@@ -1,0 +1,8 @@
+Install dependencies
+  pip install -r requirements.txt
+
+Run the Streamlit dashboard
+  streamlit run app.py
+
+OR run from terminal
+  python main.py demo

@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.env
+token.json
+credentials.json
+exports/
+*.xlsx
+.venv/
+venv/
+Fundwell AI Internship — Take-Home Project.pdf
