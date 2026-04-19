@@ -7,7 +7,6 @@ import json
 from langchain_anthropic import ChatAnthropic
 from langchain_core.prompts import ChatPromptTemplate
 
-from src.config import ANTHROPIC_API_KEY, ANTHROPIC_MODEL
 from src.models import ExtractedFields, LoanApplicationState
 
 SYSTEM_PROMPT = """\
@@ -39,13 +38,6 @@ Subject: {subject}
 {raw_email}
 """
 
-llm = ChatAnthropic(
-    model=ANTHROPIC_MODEL,
-    api_key=ANTHROPIC_API_KEY,
-    temperature=0,
-    max_tokens=1024,
-)
-
 prompt = ChatPromptTemplate.from_messages(
     [
         ("system", SYSTEM_PROMPT),
@@ -56,10 +48,20 @@ prompt = ChatPromptTemplate.from_messages(
 _SCHEMA_STR = json.dumps(ExtractedFields.model_json_schema(), indent=2)
 
 
+def _get_llm():
+    from src.config import ANTHROPIC_API_KEY, ANTHROPIC_MODEL
+    return ChatAnthropic(
+        model=ANTHROPIC_MODEL,
+        api_key=ANTHROPIC_API_KEY,
+        temperature=0,
+        max_tokens=1024,
+    )
+
+
 def extract_node(state: LoanApplicationState) -> LoanApplicationState:
     """Call the LLM to extract structured fields from the email body."""
 
-    chain = prompt | llm
+    chain = prompt | _get_llm()
     response = chain.invoke(
         {
             "schema": _SCHEMA_STR,

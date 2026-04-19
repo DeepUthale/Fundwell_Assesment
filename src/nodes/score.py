@@ -6,8 +6,6 @@ from langchain_anthropic import ChatAnthropic
 from langchain_core.prompts import ChatPromptTemplate
 
 from src.config import (
-    ANTHROPIC_API_KEY,
-    ANTHROPIC_MODEL,
     MIN_REVENUE_TO_LOAN_RATIO,
     MIN_YEARS_IN_BUSINESS,
     QUALIFIED_THRESHOLD,
@@ -15,13 +13,15 @@ from src.config import (
 )
 from src.models import LoanApplicationState, TriageDecision
 
-# LLM for nuanced risk analysis
-llm = ChatAnthropic(
-    model=ANTHROPIC_MODEL,
-    api_key=ANTHROPIC_API_KEY,
-    temperature=0,
-    max_tokens=512,
-)
+
+def _get_llm():
+    from src.config import ANTHROPIC_API_KEY, ANTHROPIC_MODEL
+    return ChatAnthropic(
+        model=ANTHROPIC_MODEL,
+        api_key=ANTHROPIC_API_KEY,
+        temperature=0,
+        max_tokens=512,
+    )
 
 RISK_PROMPT = ChatPromptTemplate.from_messages(
     [
@@ -78,7 +78,7 @@ def score_node(state: LoanApplicationState) -> LoanApplicationState:
 
     # --- LLM-based nuanced risk assessment ---
     try:
-        chain = RISK_PROMPT | llm
+        chain = RISK_PROMPT | _get_llm()
         response = chain.invoke(
             {
                 "business_name": state.get("business_name", "Unknown"),

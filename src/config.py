@@ -3,8 +3,21 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
+
+def _get_secret(key: str, default: str = "") -> str:
+    """Read from Streamlit secrets first, then fall back to env vars."""
+    try:
+        import streamlit as st
+        val = st.secrets.get(key, None)
+        if val:
+            return val
+    except Exception:
+        pass
+    return os.getenv(key, default)
+
+
+ANTHROPIC_API_KEY = _get_secret("ANTHROPIC_API_KEY")
+ANTHROPIC_MODEL = _get_secret("ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
 
 GMAIL_CREDENTIALS_PATH = os.getenv("GMAIL_CREDENTIALS_PATH", "credentials.json")
 GMAIL_INBOX_LABEL = os.getenv("GMAIL_INBOX_LABEL", "INBOX")
