@@ -10,6 +10,7 @@ import streamlit as st
 
 from src.graph import triage_app
 from src.models import LoanApplicationState
+from src.utils.email_fetcher import fetch_emails_imap
 from src.utils.excel_export import generate_report
 
 # Page config
@@ -216,7 +217,7 @@ with st.sidebar:
 if page == "📩 Triage Email":
     st.header("📩 Triage a Loan Inquiry Email")
 
-    tab1, tab2 = st.tabs(["Paste Email", "Use Sample"])
+    tab1, tab2, tab3 = st.tabs(["Paste Email", "Fetch from Email", "Use Sample"])
 
     with tab1:
         with st.form("email_form"):
@@ -240,6 +241,85 @@ if page == "📩 Triage Email":
                 render_result_card(result)
 
     with tab2:
+        st.markdown("Fetch recent emails from your Gmail inbox and triage them.")
+        st.info(
+            "**Setup:** You need a Gmail App Password. "
+            "Go to [Google Account > Security > App Passwords](https://myaccount.google.com/apppasswords) "
+            "to generate one. (Requires 2-Step Verification to be enabled.)"
+        )
+
+        with st.form("fetch_email_form"):
+            fetch_email = st.text_input(
+                "Gmail Address",
+                placeholder="you@gmail.com",
+            )
+            fetch_password = st.text_input(
+                "App Password",
+                type="password",
+                placeholder="xxxx xxxx xxxx xxxx",
+            )
+            fetch_count = st.selectbox(
+                "Number of emails to fetch",
+                options=[5, 10, 15, 20],
+                index=0,
+            )
+            fetch_submitted = st.form_submit_button("Fetch Emails", type="primary")
+
+        if fetch_submitted:
+            if not fetch_email.strip() or not fetch_password.strip():
+                st.error("Please enter both your Gmail address and App Password.")
+            else:
+                with st.spinner(f"Fetching last {fetch_count} emails..."):
+                    try:
+                        fetched = fetch_emails_imap(
+                            fetch_email.strip(),
+                            fetch_password.strip(),
+                            max_results=fetch_count,
+                        )
+                    except Exception as e:
+                        st.error(f"Failed to fetch emails: {e}")
+                        fetched = []
+
+                if fetched:
+                    st.success(f"Fetched {len(fetched)} emails.")
+                    st.session_state["fetched_emails"] = fetched
+
+        # Display fetched emails for triaging
+        if "fetched_emails" in st.session_state and st.session_state["fetched_emails"]:
+            st.divider()
+            st.subheader(f"Fetched Emails ({len(st.session_state['fetched_emails'])})")
+
+            for i, email_state in enumerate(st.session_state["fetched_emails"]):
+                with st.expander(
+                    f"{email_state.get('subject', '(no subject)')} — {email_state.get('sender', 'Unknown')}"
+                ):
+                    st.text(email_state.get("raw_email", "")[:500])
+                    if st.button("Triage This Email", key=f"fetched_{i}"):
+                        with st.spinner("Processing..."):
+                            result = process_email(
+                                email_state.get("sender", ""),
+                                email_state.get("subject", ""),
+                                email_state.get("raw_email", ""),
+                            )
+                        st.success("Done!")
+                        render_result_card(result)
+
+            if st.button("Triage All Fetched Emails", type="primary"):
+                progress = st.progress(0)
+                total = len(st.session_state["fetched_emails"])
+                for i, email_state in enumerate(st.session_state["fetched_emails"]):
+                    with st.spinner(f"Processing email {i + 1}/{total}..."):
+                        result = process_email(
+                            email_state.get("sender", ""),
+                            email_state.get("subject", ""),
+                            email_state.get("raw_email", ""),
+                        )
+                    progress.progress((i + 1) / total)
+                st.success(f"All {total} emails triaged!")
+                st.session_state["fetched_emails"] = []
+                st.rerun()
+
+    with tab3:
         st.markdown("Select a sample email to test the pipeline:")
 
         for i, sample in enumerate(SAMPLE_EMAILS):
