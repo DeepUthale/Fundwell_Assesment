@@ -2,7 +2,7 @@
  
 An intelligent loan application triage system that automatically ingests, extracts, validates, enriches, scores, and routes loan applications from email to actionable decisions -- powered by Claude LLM and orchestrated with LangGraph.
  
-![System Architecture](assets/system_architecture.png)
+![System Architecture](src/system_architecture.png)
  
 ## Overview
  
